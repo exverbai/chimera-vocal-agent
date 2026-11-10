@@ -72,7 +72,7 @@ it can sing.
 
 ## About this repository
 
-This is the built plugin (version 0.3.0). Its source is the `agent/` folder of
+This is the built plugin (version 0.3.1). Its source is the `agent/` folder of
 [CHIMERA](https://github.com/jamesondh/chimera-vocal-synth), by Jameson Hodge (MIT);
 `plugin/LICENSES` holds the licences of what it carries (the engine, the CMU Pronouncing
 Dictionary, the fonts).

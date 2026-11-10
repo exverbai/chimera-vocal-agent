@@ -8,7 +8,7 @@
       "name": "sing",
       "source": "./plugin",
       "description": "Your coding agent sings its replies, and songs it composes, on the CHIMERA physical-model voice.",
-      "version": "0.3.0"
+      "version": "0.3.1"
     }
   ]
 }

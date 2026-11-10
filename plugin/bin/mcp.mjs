@@ -9,7 +9,7 @@ import { fileURLToPath } from "node:url";
 import { homedir } from "node:os";
 import { delimiter, dirname, join } from "node:path";
 var BUNDLED = true;
-var BUILD = "277b434ddb3b";
+var BUILD = "920c05176bfa";
 var here = dirname(fileURLToPath(import.meta.url));
 var root = BUNDLED ? dirname(here) : dirname(dirname(here));
 var STAGE_DIR = BUNDLED ? join(root, "stage") : join(root, "dist");
@@ -292,7 +292,7 @@ async function handle(msg) {
       return ok({
         protocolVersion: typeof params?.protocolVersion === "string" ? params.protocolVersion : "2025-06-18",
         capabilities: { tools: {} },
-        serverInfo: { name: "chimera-sing", version: "0.3.0" },
+        serverInfo: { name: "chimera-sing", version: "0.3.1" },
         instructions: "A physically modelled voice that sings out loud to the user. `sing` takes a score you compose; `sing_text` sings plain words to an automatic tune."
       });
     case "ping":
