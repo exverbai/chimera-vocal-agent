@@ -353,7 +353,7 @@ import { fileURLToPath } from "node:url";
 import { homedir } from "node:os";
 import { delimiter, dirname, join } from "node:path";
 var BUNDLED = true;
-var BUILD = "38bfef586d66";
+var BUILD = "277b434ddb3b";
 var here = dirname(fileURLToPath(import.meta.url));
 var root = BUNDLED ? dirname(here) : dirname(dirname(here));
 var STAGE_DIR = BUNDLED ? join(root, "stage") : join(root, "dist");
@@ -1253,7 +1253,7 @@ async function startDaemon(o) {
     res.write(`retry: 600
 
 `);
-    client.send({ type: "hello", client: client.id });
+    client.send({ type: "hello", client: client.id, build: BUILD });
     const beat = setInterval(() => res.write(`: still here
 
 `), 20000);
