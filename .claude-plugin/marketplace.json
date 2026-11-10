@@ -1,11 +1,14 @@
 {
   "name": "chimera-vocal-agent",
-  "owner": { "name": "exverbai" },
+  "owner": {
+    "name": "exverbai"
+  },
   "plugins": [
     {
       "name": "chimera-sing",
       "source": "./plugin",
-      "description": "Claude sings: replies and composed songs on the CHIMERA physical-model voice, with its animated head."
+      "description": "Your coding agent sings its replies, and songs it composes, on the CHIMERA physical-model voice.",
+      "version": "0.1.0"
     }
   ]
 }

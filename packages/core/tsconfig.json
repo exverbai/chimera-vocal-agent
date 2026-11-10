@@ -1,7 +1,0 @@
-{
-  "compilerOptions": {
-    "target": "ES2022", "module": "ESNext", "moduleResolution": "bundler", "lib": ["ES2023", "DOM"],
-    "strict": true, "skipLibCheck": true, "isolatedModules": true, "allowImportingTsExtensions": true, "noEmit": true, "types": ["bun"]
-  },
-  "include": ["src", "tests", "../daemon/src", "../daemon/tests", "../mcp/src", "../mcp/tests", "../hooks/src", "../hooks/tests"]
-}

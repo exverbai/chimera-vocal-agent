@@ -1,25 +1,23 @@
 {
-  "name": "chimera-vocal-agent",
-  "private": true,
-  "version": "0.0.1",
+  "name": "chimera-sing",
+  "version": "0.1.0",
+  "description": "Your coding agent sings its replies, and songs it composes, on the CHIMERA physical-model voice.",
   "license": "MIT",
   "type": "module",
-  "workspaces": [
-    "packages/*"
+  "keywords": [
+    "pi-package"
   ],
-  "scripts": {
-    "wasm": "cd vendor/chimera && cargo build -p chimera-wasm --release --target wasm32-unknown-unknown && cp target/wasm32-unknown-unknown/release/chimera_wasm.wasm src/wasm/chimera.wasm && cp src/wasm/chimera.wasm ../../prebuilt/chimera.wasm",
-    "stage:dev": "bun run --cwd packages/stage dev",
-    "stage:build": "bun run --cwd packages/stage build",
-    "build": "bun run --cwd packages/stage build && bun run build:plugin",
-    "test": "bun test packages/core packages/daemon packages/mcp packages/hooks packages/omp",
-    "typecheck": "bunx tsc --noEmit -p packages/core && bunx tsc --noEmit -p packages/stage",
-    "sing": "bun packages/daemon/src/cli.ts",
-    "daemon": "bun packages/daemon/src/main.ts",
-    "build:plugin": "bun build packages/mcp/src/server.ts --target bun --outfile plugin/bin/mcp.js && bun build packages/hooks/src/on-event.ts --target bun --outfile plugin/bin/hook.js",
-    "setup": "bun scripts/setup.ts"
+  "pi": {
+    "extensions": [
+      "./plugin/ext/pi.js"
+    ],
+    "skills": [
+      "./plugin/skills"
+    ]
   },
-  "bin": {
-    "chimera-sing": "packages/daemon/src/cli.ts"
+  "omp": {
+    "extensions": [
+      "./plugin/ext/pi.js"
+    ]
   }
 }

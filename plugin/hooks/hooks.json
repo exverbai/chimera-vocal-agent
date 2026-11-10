@@ -4,14 +4,14 @@
     "Stop": [
       {
         "hooks": [
-          { "type": "command", "command": "bun \"${CLAUDE_PLUGIN_ROOT}/bin/hook.js\"", "timeout": 15 }
+          { "type": "command", "command": "sh \"${CLAUDE_PLUGIN_ROOT}/bin/run.sh\" hook", "timeout": 15 }
         ]
       }
     ],
     "UserPromptSubmit": [
       {
         "hooks": [
-          { "type": "command", "command": "bun \"${CLAUDE_PLUGIN_ROOT}/bin/hook.js\"", "timeout": 15 }
+          { "type": "command", "command": "sh \"${CLAUDE_PLUGIN_ROOT}/bin/run.sh\" hook", "timeout": 15 }
         ]
       }
     ]

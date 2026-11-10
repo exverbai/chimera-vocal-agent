@@ -1,9 +1,0 @@
-{
-  "name": "chimera-vocal-agent-omp",
-  "private": true,
-  "version": "0.0.1",
-  "description": "Oh My Pi sings: replies and songs on the CHIMERA physical-model voice, with its animated head",
-  "type": "module",
-  "omp": { "extensions": ["./index.ts"] },
-  "pi": { "extensions": ["./index.ts"] }
-}

@@ -74,6 +74,7 @@ Other fields: `bpm` (30 to 240, one tempo), `body` (`male`, `female`, `child`), 
 
 ## Commands the user has
 
-`/sing` sings your last reply to an automatic tune. `/sing <text>` sings that text.
-`/sing song [topic]` asks you for a composed song. `/sing auto on|off` sings every reply.
-`/sing stop`, `/sing voice male|female|child [tune|chant]`.
+`/sing on` turns sing mode on: every reply is sung as it ends (its chat text, never code);
+`/sing off` stops that. `/sing` sings your last reply to an automatic tune, `/sing <text>` sings
+that text, `/sing song [topic]` asks you for a composed song. Also `/sing stop`,
+`/sing length short|normal|full`, `/sing voice male|female|child [tune|chant]`.

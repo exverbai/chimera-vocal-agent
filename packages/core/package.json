@@ -1,7 +1,0 @@
-{
-  "name": "@chimera-vocal-agent/core",
-  "private": true,
-  "version": "0.0.1",
-  "type": "module",
-  "devDependencies": { "@types/bun": "1.4.4" }
-}
