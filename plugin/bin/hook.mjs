@@ -15,7 +15,7 @@ import { fileURLToPath } from "node:url";
 import { homedir } from "node:os";
 import { delimiter, dirname, join } from "node:path";
 var BUNDLED = true;
-var BUILD = "61844e5125c9";
+var BUILD = "7dc10f16398c";
 var here = dirname(fileURLToPath(import.meta.url));
 var root = BUNDLED ? dirname(here) : dirname(dirname(here));
 var STAGE_DIR = BUNDLED ? join(root, "stage") : join(root, "dist");
@@ -111,8 +111,17 @@ var SCORE_FORMAT = `Score: {"bpm": 96, "body": "female", "title": "...", "notes"
 - lyric: ONE syllable per note. A trailing hyphen continues the word on the next note ("an-", "y-", "where"). "-" holds the previous vowel on a new pitch. End phrases with , . ! or ? and put a rest after them.
 - body: "male" (sing C3-E4), "female" (A3-E5) or "child" (B3-D5). English words only; spell numbers out.
 Example: {"bpm":96,"body":"female","notes":[["E4",1,"Breathe"],["C4",1,"in,"],["D4",1,"breathe"],["A3",1.5,"out,"],["-",0.5],["A3",0.5,"I"],["C4",0.5,"am"],["E4",1,"made"],["D4",0.5,"of"],["C4",2,"air."]]}`;
-var TOOL_DESCRIPTION = `Sing out loud to the user: a physically modelled voice (CHIMERA) sings your score in a window with an animated head. Use it when the user asks you to sing, or to celebrate or announce something in song. Keep songs short (2-4 lines, under 20 s). It returns at once while the song plays; warnings tell you what was repaired.
-${SCORE_FORMAT}`;
+var BAND_FORMAT = `Band (up to 4 voices, 60 s): {"bpm": 100, "title": "...", "voices": [
+  {"name": "lead", "body": "female", "notes": "E4/1/Breathe C4/1/in, D4/1/breathe A3/1.5/out, -/0.5"},
+  {"name": "low", "body": "male", "notes": "C4/1/Breathe A3/1/in, B3/1/breathe F3/1.5/out, -/0.5"},
+  {"name": "bass", "body": "male", "notes": "A2/1/dum A2/1/dum G2/2/doo", "repeat": 2},
+  {"name": "beat", "beat": "B . t . | Pf . t ."}]}
+- notes: the [pitch, beats, lyric] list, or the shorter string "pitch/beats/lyric ..." (a rest is -/1). "repeat" loops a voice's notes.
+- beat: sixteenth steps, "." a rest; sounds B (kick), t and tss (hat), Pf and K (snare). It loops for the whole song, after one bar alone to count the band in.
+- The voice named "lead" carries the tune; give the others a third or sixth below it, or the chord roots. Optional per voice: "volume" (dB, -30 to 6), "pan" (-1 to 1).`;
+var TOOL_DESCRIPTION = `Sing out loud to the user: a physically modelled voice (CHIMERA) sings your score in a window with an animated head; a band score adds harmony, bass and a beatboxer, each with a head. Use it when the user asks you to sing, or to celebrate or announce something in song. Keep songs short (one voice: 2-4 lines, under 20 s; a band: under 60 s). It returns at once while the song plays; warnings tell you what was repaired. Read the compose-song skill before writing a band or a parody.
+${SCORE_FORMAT}
+${BAND_FORMAT}`;
 var SONG_PROMPT = (topic) => `Sing me a short song${topic ? ` about: ${topic}` : " about what we just did"}. Write 2 to 4 rhyming lines with a simple, singable melody that moves mostly by step and ends on its home note, then call the \`sing\` tool once with the score. Do not explain the score; after the tool call, reply with just the lyrics.`;
 
 // agent/core/score.ts

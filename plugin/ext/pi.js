@@ -9,7 +9,7 @@ import { fileURLToPath } from "node:url";
 import { homedir } from "node:os";
 import { delimiter, dirname, join } from "node:path";
 var BUNDLED = true;
-var BUILD = "61844e5125c9";
+var BUILD = "7dc10f16398c";
 var here = dirname(fileURLToPath(import.meta.url));
 var root = BUNDLED ? dirname(here) : dirname(dirname(here));
 var STAGE_DIR = BUNDLED ? join(root, "stage") : join(root, "dist");
@@ -105,22 +105,47 @@ var SCORE_FORMAT = `Score: {"bpm": 96, "body": "female", "title": "...", "notes"
 - lyric: ONE syllable per note. A trailing hyphen continues the word on the next note ("an-", "y-", "where"). "-" holds the previous vowel on a new pitch. End phrases with , . ! or ? and put a rest after them.
 - body: "male" (sing C3-E4), "female" (A3-E5) or "child" (B3-D5). English words only; spell numbers out.
 Example: {"bpm":96,"body":"female","notes":[["E4",1,"Breathe"],["C4",1,"in,"],["D4",1,"breathe"],["A3",1.5,"out,"],["-",0.5],["A3",0.5,"I"],["C4",0.5,"am"],["E4",1,"made"],["D4",0.5,"of"],["C4",2,"air."]]}`;
-var TOOL_DESCRIPTION = `Sing out loud to the user: a physically modelled voice (CHIMERA) sings your score in a window with an animated head. Use it when the user asks you to sing, or to celebrate or announce something in song. Keep songs short (2-4 lines, under 20 s). It returns at once while the song plays; warnings tell you what was repaired.
-${SCORE_FORMAT}`;
+var BAND_FORMAT = `Band (up to 4 voices, 60 s): {"bpm": 100, "title": "...", "voices": [
+  {"name": "lead", "body": "female", "notes": "E4/1/Breathe C4/1/in, D4/1/breathe A3/1.5/out, -/0.5"},
+  {"name": "low", "body": "male", "notes": "C4/1/Breathe A3/1/in, B3/1/breathe F3/1.5/out, -/0.5"},
+  {"name": "bass", "body": "male", "notes": "A2/1/dum A2/1/dum G2/2/doo", "repeat": 2},
+  {"name": "beat", "beat": "B . t . | Pf . t ."}]}
+- notes: the [pitch, beats, lyric] list, or the shorter string "pitch/beats/lyric ..." (a rest is -/1). "repeat" loops a voice's notes.
+- beat: sixteenth steps, "." a rest; sounds B (kick), t and tss (hat), Pf and K (snare). It loops for the whole song, after one bar alone to count the band in.
+- The voice named "lead" carries the tune; give the others a third or sixth below it, or the chord roots. Optional per voice: "volume" (dB, -30 to 6), "pan" (-1 to 1).`;
+var TOOL_DESCRIPTION = `Sing out loud to the user: a physically modelled voice (CHIMERA) sings your score in a window with an animated head; a band score adds harmony, bass and a beatboxer, each with a head. Use it when the user asks you to sing, or to celebrate or announce something in song. Keep songs short (one voice: 2-4 lines, under 20 s; a band: under 60 s). It returns at once while the song plays; warnings tell you what was repaired. Read the compose-song skill before writing a band or a parody.
+${SCORE_FORMAT}
+${BAND_FORMAT}`;
 var SONG_PROMPT = (topic) => `Sing me a short song${topic ? ` about: ${topic}` : " about what we just did"}. Write 2 to 4 rhyming lines with a simple, singable melody that moves mostly by step and ends on its home note, then call the \`sing\` tool once with the score. Do not explain the score; after the tool call, reply with just the lyrics.`;
+var NOTES_SCHEMA = {
+  description: 'One [pitch, beats, lyric] per note, e.g. ["E4", 1, "Breathe"], a rest ["-", 1]; or the string "E4/1/Breathe C4/1/in, -/1"',
+  anyOf: [{ type: "array", items: { type: "array", items: { type: ["string", "number"] } } }, { type: "string" }]
+};
 var SCORE_SCHEMA = {
   type: "object",
   properties: {
     bpm: { type: "number", description: "Tempo, 30 to 240" },
     body: { type: "string", enum: ["male", "female", "child"], description: "The voice (default: the user's chosen voice)" },
     title: { type: "string", description: "Shown above the singer" },
-    notes: {
+    notes: NOTES_SCHEMA,
+    voices: {
       type: "array",
-      description: 'One [pitch, beats, lyric] per note, e.g. ["E4", 1, "Breathe"]; a rest is ["-", 1]',
-      items: { type: "array", items: { type: ["string", "number"] } }
+      description: "A band instead of `notes`: up to 4 voices. The one named lead carries the tune.",
+      items: {
+        type: "object",
+        properties: {
+          name: { type: "string" },
+          body: { type: "string", enum: ["male", "female", "child"] },
+          notes: NOTES_SCHEMA,
+          repeat: { type: "number", description: "Play the notes this many times" },
+          beat: { type: "string", description: 'A beatbox pattern instead of notes, e.g. "B . t . | Pf . t ."' },
+          volume: { type: "number", description: "dB, -30 to 6" },
+          pan: { type: "number", description: "-1 (left) to 1 (right)" }
+        }
+      }
     }
   },
-  required: ["bpm", "notes"]
+  required: ["bpm"]
 };
 
 // agent/core/score.ts
@@ -310,12 +335,25 @@ function chimeraSing(pi) {
     description: TOOL_DESCRIPTION,
     loadMode: "essential",
     approval: "read",
-    parameters: z ? z.object({
-      bpm: z.number().describe("Tempo, 30 to 240"),
-      body: z.enum(["male", "female", "child"]).optional().describe("The voice (default: the user's chosen voice)"),
-      title: z.string().optional().describe("Shown above the singer"),
-      notes: z.array(z.array(z.union([z.string(), z.number()]))).describe('One [pitch, beats, lyric] per note, e.g. ["E4", 1, "Breathe"]; a rest is ["-", 1]')
-    }) : SCORE_SCHEMA,
+    parameters: z ? (() => {
+      const notes = z.union([z.array(z.array(z.union([z.string(), z.number()]))), z.string()]).describe('One [pitch, beats, lyric] per note, e.g. ["E4", 1, "Breathe"], a rest ["-", 1]; or the string "E4/1/Breathe C4/1/in, -/1"');
+      const body = z.enum(["male", "female", "child"]);
+      return z.object({
+        bpm: z.number().describe("Tempo, 30 to 240"),
+        body: body.optional().describe("The voice (default: the user's chosen voice)"),
+        title: z.string().optional().describe("Shown above the singer"),
+        notes: notes.optional(),
+        voices: z.array(z.object({
+          name: z.string().optional(),
+          body: body.optional(),
+          notes: notes.optional(),
+          repeat: z.number().optional().describe("Play the notes this many times"),
+          beat: z.string().optional().describe('A beatbox pattern instead of notes, e.g. "B . t . | Pf . t ."'),
+          volume: z.number().optional().describe("dB, -30 to 6"),
+          pan: z.number().optional().describe("-1 (left) to 1 (right)")
+        })).optional().describe("A band instead of notes: up to 4 voices. The one named lead carries the tune.")
+      });
+    })() : SCORE_SCHEMA,
     async execute(_id, params, _signal, _onUpdate, ctx) {
       try {
         const r = await sing({ score: params });

@@ -353,7 +353,7 @@ import { fileURLToPath } from "node:url";
 import { homedir } from "node:os";
 import { delimiter, dirname, join } from "node:path";
 var BUNDLED = true;
-var BUILD = "61844e5125c9";
+var BUILD = "7dc10f16398c";
 var here = dirname(fileURLToPath(import.meta.url));
 var root = BUNDLED ? dirname(here) : dirname(dirname(here));
 var STAGE_DIR = BUNDLED ? join(root, "stage") : join(root, "dist");
@@ -385,6 +385,7 @@ function loadEngine() {
     const up = await Promise.resolve().then(() => (init_engine(), exports_engine));
     new up.EnglishG2P().setDictionaryText(gunzipSync(readFileSync(DICT)).toString());
     return {
+      beatSounds: up.BEAT_SOUNDS.map((s) => ({ id: s.id, role: s.role })),
       syllables: (text) => up.lyricsToSyllables(text).map((s) => ({
         text: s.text,
         stress: s.nucleus.stress ?? 0,
@@ -399,6 +400,8 @@ function loadEngine() {
 
 // agent/core/score.ts
 var DEFAULT_LIMITS = { maxSeconds: 45 };
+var BAND_LIMITS = { maxSeconds: 60 };
+var MAX_VOICES = 4;
 var RANGES = { male: [38, 69], female: [53, 84], child: [57, 81] };
 var HARD = [28, 100];
 var LEAD = 0.35;
@@ -491,7 +494,9 @@ function compile(input, engine, limits = DEFAULT_LIMITS) {
     err('a score is an object: {"bpm": 96, "notes": [["E4", 1, "word"], ...]}');
     return fail();
   }
-  const s = input;
+  const s = { ...input };
+  if (s.voices !== undefined)
+    return compileBand(s, engine, limits === DEFAULT_LIMITS ? BAND_LIMITS : limits);
   const bpm = Number(s.bpm ?? 96);
   if (!Number.isFinite(bpm) || bpm < 30 || bpm > 240)
     err(`bpm must be between 30 and 240, not ${JSON.stringify(s.bpm)}`);
@@ -506,6 +511,14 @@ function compile(input, engine, limits = DEFAULT_LIMITS) {
   const vibrato = s.vibrato === undefined ? undefined : Number(s.vibrato);
   if (vibrato !== undefined && !(vibrato >= 0 && vibrato <= 100))
     err("vibrato is in cents, 0 to 100");
+  if (typeof s.notes === "string") {
+    const parsed = parseNoteString(s.notes);
+    if (typeof parsed === "string") {
+      err(parsed);
+      return fail();
+    }
+    s.notes = parsed;
+  }
   if (!Array.isArray(s.notes) || !s.notes.length) {
     err('the score needs "notes": [["E4", 1, "word"], ...]');
     return fail();
@@ -642,6 +655,116 @@ function compile(input, engine, limits = DEFAULT_LIMITS) {
   if (vibrato !== undefined)
     melody.vibrato = vibrato;
   return { ok: true, melody, seconds, notes: sounding.length, issues };
+}
+function parseNoteString(text) {
+  const out = [];
+  for (const [i, tok] of text.trim().split(/\s+/).filter(Boolean).entries()) {
+    const parts = tok.split("/");
+    if (parts.length < 2 || parts.length > 3)
+      return `note ${i + 1} "${tok}": write pitch/beats/lyric, e.g. E4/1/love or -/1 for a rest`;
+    out.push([parts[0], Number(parts[1]), ...parts[2] !== undefined && parts[2] !== "" ? [parts[2]] : []]);
+  }
+  return out;
+}
+function voiceNotes(v) {
+  let notes = v.notes;
+  if (typeof notes === "string")
+    notes = parseNoteString(notes);
+  if (typeof notes === "string")
+    return notes;
+  if (!Array.isArray(notes))
+    return 'a singing voice needs "notes"';
+  const times = v.repeat === undefined ? 1 : Number(v.repeat);
+  if (!Number.isInteger(times) || times < 1 || times > 32)
+    return '"repeat" is a whole number from 1 to 32';
+  return Array.from({ length: times }, () => notes).flat();
+}
+function checkBeat(text, engine) {
+  if (typeof text !== "string" || !text.trim())
+    return 'a beat is a pattern like "B . t . | Pf . t ."';
+  const known = new Set(engine.beatSounds.map((b) => b.id));
+  const tokens = text.split(/\s+/).filter((t) => t && t !== "|");
+  const unknown = [...new Set(tokens.filter((t) => t !== "." && !known.has(t)))];
+  if (unknown.length)
+    return `the beat has sounds the beatboxer does not know: ${unknown.join(" ")}. Use ${engine.beatSounds.map((b) => `${b.id} (${b.role})`).join(", ")}, and "." for a rest`;
+  if (!tokens.some((t) => t !== "."))
+    return "the beat has no sounds in it";
+  if (tokens.length > 128)
+    return "the beat pattern is longer than 128 steps: write one or two bars, it loops";
+  return null;
+}
+function compileBand(input, engine, limits = DEFAULT_LIMITS) {
+  const issues = [];
+  const fail = () => ({ ok: false, seconds: 0, notes: 0, issues });
+  const voices = input.voices;
+  if (!Array.isArray(voices) || !voices.length) {
+    issues.push({ level: "error", message: '"voices" is a list: [{"name": "lead", "notes": ...}, {"name": "beat", "beat": "B . t ."}]' });
+    return fail();
+  }
+  const objects = voices.map((v) => v && typeof v === "object" && !Array.isArray(v) ? v : {});
+  if (voices.length > MAX_VOICES)
+    issues.push({ level: "error", message: `a band has at most ${MAX_VOICES} voices (the lead and ${MAX_VOICES - 1} more); this one has ${voices.length}` });
+  const singing = objects.filter((v) => v.beat === undefined);
+  if (!singing.length)
+    issues.push({ level: "error", message: "a band needs at least one singing voice" });
+  if (issues.length)
+    return fail();
+  const lead = singing.find((v) => v.name === "lead") ?? singing[0];
+  const countIn = Math.max(0, ...objects.map((v) => typeof v.beat === "string" ? v.beat.split(/\s+/).filter((t) => t && t !== "|").length : 0));
+  const backing = [];
+  let melody;
+  let notes = 0;
+  let longest = 0;
+  const pans = [-0.45, 0.45, 0];
+  objects.forEach((v, i) => {
+    const name = typeof v.name === "string" && v.name.trim() ? v.name.trim().slice(0, 24) : `voice ${i + 1}`;
+    const tag = (m) => `${name}: ${m}`;
+    const level = (key, lo, hi) => {
+      if (v[key] === undefined)
+        return;
+      const x2 = Number(v[key]);
+      if (Number.isFinite(x2) && x2 >= lo && x2 <= hi)
+        return x2;
+      issues.push({ level: "error", message: tag(`${key} is from ${lo} to ${hi}`) });
+      return;
+    };
+    const volume = level("volume", -30, 6);
+    const pan = level("pan", -1, 1);
+    if (v.beat !== undefined) {
+      const bad = checkBeat(v.beat, engine);
+      if (bad)
+        issues.push({ level: "error", message: tag(bad) });
+      else
+        backing.push({ name, beat: String(v.beat), volume: volume ?? -3, pan: pan ?? 0 });
+      return;
+    }
+    const n = voiceNotes(v);
+    if (typeof n === "string")
+      return void issues.push({ level: "error", message: tag(n) });
+    const c = compile({ bpm: input.bpm, body: v.body ?? input.body, notes: n, vibrato: v.vibrato ?? input.vibrato }, engine, { maxSeconds: Infinity });
+    for (const x2 of c.issues)
+      issues.push({ ...x2, message: tag(x2.message) });
+    if (!c.ok || !c.melody)
+      return;
+    longest = Math.max(longest, c.melody.notes.reduce((t, x2) => t + x2[1], 0));
+    notes += c.notes;
+    if (v === lead) {
+      melody = c.melody;
+      if (typeof input.title === "string" && input.title.trim())
+        melody.title = input.title.trim().slice(0, 80);
+    } else
+      backing.push({ name, body: c.melody.body ?? "male", lyrics: c.melody.lyrics, notes: c.melody.notes, vibrato: c.melody.vibrato, volume: volume ?? -5, pan: pan ?? pans[backing.length % pans.length] });
+  });
+  if (issues.some((x2) => x2.level === "error") || !melody)
+    return fail();
+  const beat = 60 / melody.bpm;
+  const seconds = (countIn ? countIn / 4 * beat : 0.35) + longest * beat + 0.4;
+  if (seconds > limits.maxSeconds) {
+    issues.push({ level: "error", message: `the band plays for ${seconds.toFixed(0)} s; keep it under ${limits.maxSeconds} s (fewer repeats, or a faster tempo)` });
+    return fail();
+  }
+  melody.backing = backing;
+  return { ok: true, melody, seconds, notes, issues };
 }
 
 // agent/core/text.ts
@@ -1169,7 +1292,10 @@ async function startDaemon(o) {
       }
       lastActivity = Date.now();
       if (m.client === primary()?.id) {
-        if (m.type === "ended")
+        if (m.type === "report") {
+          const { client: _c, type: _t, ...rest } = m;
+          o.log(`stage: ${JSON.stringify(rest)}`);
+        } else if (m.type === "ended")
           done(m.id);
         else if (m.type === "error") {
           o.log(`stage could not sing song ${m.id}: ${m.message}`);

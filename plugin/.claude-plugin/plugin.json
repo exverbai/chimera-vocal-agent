@@ -1,6 +1,6 @@
 {
   "name": "chimera-sing",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Claude sings: replies and composed songs on the CHIMERA physical-model voice, with its animated head.",
   "license": "MIT",
   "keywords": [

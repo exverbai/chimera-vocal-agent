@@ -9,7 +9,7 @@ import { fileURLToPath } from "node:url";
 import { homedir } from "node:os";
 import { delimiter, dirname, join } from "node:path";
 var BUNDLED = true;
-var BUILD = "61844e5125c9";
+var BUILD = "7dc10f16398c";
 var here = dirname(fileURLToPath(import.meta.url));
 var root = BUNDLED ? dirname(here) : dirname(dirname(here));
 var STAGE_DIR = BUNDLED ? join(root, "stage") : join(root, "dist");
@@ -105,24 +105,49 @@ var SCORE_FORMAT = `Score: {"bpm": 96, "body": "female", "title": "...", "notes"
 - lyric: ONE syllable per note. A trailing hyphen continues the word on the next note ("an-", "y-", "where"). "-" holds the previous vowel on a new pitch. End phrases with , . ! or ? and put a rest after them.
 - body: "male" (sing C3-E4), "female" (A3-E5) or "child" (B3-D5). English words only; spell numbers out.
 Example: {"bpm":96,"body":"female","notes":[["E4",1,"Breathe"],["C4",1,"in,"],["D4",1,"breathe"],["A3",1.5,"out,"],["-",0.5],["A3",0.5,"I"],["C4",0.5,"am"],["E4",1,"made"],["D4",0.5,"of"],["C4",2,"air."]]}`;
-var TOOL_DESCRIPTION = `Sing out loud to the user: a physically modelled voice (CHIMERA) sings your score in a window with an animated head. Use it when the user asks you to sing, or to celebrate or announce something in song. Keep songs short (2-4 lines, under 20 s). It returns at once while the song plays; warnings tell you what was repaired.
-${SCORE_FORMAT}`;
+var BAND_FORMAT = `Band (up to 4 voices, 60 s): {"bpm": 100, "title": "...", "voices": [
+  {"name": "lead", "body": "female", "notes": "E4/1/Breathe C4/1/in, D4/1/breathe A3/1.5/out, -/0.5"},
+  {"name": "low", "body": "male", "notes": "C4/1/Breathe A3/1/in, B3/1/breathe F3/1.5/out, -/0.5"},
+  {"name": "bass", "body": "male", "notes": "A2/1/dum A2/1/dum G2/2/doo", "repeat": 2},
+  {"name": "beat", "beat": "B . t . | Pf . t ."}]}
+- notes: the [pitch, beats, lyric] list, or the shorter string "pitch/beats/lyric ..." (a rest is -/1). "repeat" loops a voice's notes.
+- beat: sixteenth steps, "." a rest; sounds B (kick), t and tss (hat), Pf and K (snare). It loops for the whole song, after one bar alone to count the band in.
+- The voice named "lead" carries the tune; give the others a third or sixth below it, or the chord roots. Optional per voice: "volume" (dB, -30 to 6), "pan" (-1 to 1).`;
+var TOOL_DESCRIPTION = `Sing out loud to the user: a physically modelled voice (CHIMERA) sings your score in a window with an animated head; a band score adds harmony, bass and a beatboxer, each with a head. Use it when the user asks you to sing, or to celebrate or announce something in song. Keep songs short (one voice: 2-4 lines, under 20 s; a band: under 60 s). It returns at once while the song plays; warnings tell you what was repaired. Read the compose-song skill before writing a band or a parody.
+${SCORE_FORMAT}
+${BAND_FORMAT}`;
 var TEXT_TOOL_DESCRIPTION = "Sing some plain text out loud to the user, to an automatic tune (no score needed). The CHIMERA voice sings it at once in its window. Use it when the user asks you to sing or say something aloud and the melody does not matter. English words; about 30 words at most are sung.";
 var STOP_TOOL_DESCRIPTION = "Stop the CHIMERA voice: cut the song being sung and drop any queued ones.";
 var MODE_TOOL_DESCRIPTION = "Turn sing mode on or off. While it is on, every reply you give the user is sung aloud by the CHIMERA voice (the chat text only, never code). Use it when the user asks you to sing your answers, or to stop doing so.";
+var NOTES_SCHEMA = {
+  description: 'One [pitch, beats, lyric] per note, e.g. ["E4", 1, "Breathe"], a rest ["-", 1]; or the string "E4/1/Breathe C4/1/in, -/1"',
+  anyOf: [{ type: "array", items: { type: "array", items: { type: ["string", "number"] } } }, { type: "string" }]
+};
 var SCORE_SCHEMA = {
   type: "object",
   properties: {
     bpm: { type: "number", description: "Tempo, 30 to 240" },
     body: { type: "string", enum: ["male", "female", "child"], description: "The voice (default: the user's chosen voice)" },
     title: { type: "string", description: "Shown above the singer" },
-    notes: {
+    notes: NOTES_SCHEMA,
+    voices: {
       type: "array",
-      description: 'One [pitch, beats, lyric] per note, e.g. ["E4", 1, "Breathe"]; a rest is ["-", 1]',
-      items: { type: "array", items: { type: ["string", "number"] } }
+      description: "A band instead of `notes`: up to 4 voices. The one named lead carries the tune.",
+      items: {
+        type: "object",
+        properties: {
+          name: { type: "string" },
+          body: { type: "string", enum: ["male", "female", "child"] },
+          notes: NOTES_SCHEMA,
+          repeat: { type: "number", description: "Play the notes this many times" },
+          beat: { type: "string", description: 'A beatbox pattern instead of notes, e.g. "B . t . | Pf . t ."' },
+          volume: { type: "number", description: "dB, -30 to 6" },
+          pan: { type: "number", description: "-1 (left) to 1 (right)" }
+        }
+      }
     }
   },
-  required: ["bpm", "notes"]
+  required: ["bpm"]
 };
 
 // agent/core/score.ts
@@ -267,7 +292,7 @@ async function handle(msg) {
       return ok({
         protocolVersion: typeof params?.protocolVersion === "string" ? params.protocolVersion : "2025-06-18",
         capabilities: { tools: {} },
-        serverInfo: { name: "chimera-sing", version: "0.0.1" },
+        serverInfo: { name: "chimera-sing", version: "0.2.0" },
         instructions: "A physically modelled voice that sings out loud to the user. `sing` takes a score you compose; `sing_text` sings plain words to an automatic tune."
       });
     case "ping":

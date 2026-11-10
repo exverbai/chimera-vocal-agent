@@ -58,10 +58,15 @@ Then `/sing on`.
 | `/sing voice male\|female\|child [tune\|chant]` | the singer and the style of the automatic tune |
 | `/sing stop`, `/sing status` | |
 
-Or just ask: "sing me a song about this bug", "turn on sing mode". A new prompt stops the song.
+Or just ask: "sing me a song about this bug", "turn on sing mode", "sing it with a band". A new
+prompt stops the song.
+
+A band (lead, harmony, bass and a beatboxer, each with its own head) is new in 0.2. Every voice
+is a whole simulated airway running live in your browser, so a band needs a fast machine: on a
+slower one the voices can drift apart. One voice runs anywhere.
 
 ## About this repository
 
-This is the built plugin (version 0.1.0). Its source is the `agent/` folder of
+This is the built plugin (version 0.2.0). Its source is the `agent/` folder of
 [CHIMERA](https://github.com/jamesondh/chimera-vocal-synth); `plugin/LICENSES` holds the
 licences of what it carries (the engine, the CMU Pronouncing Dictionary, the fonts).
