@@ -4,11 +4,7 @@ Your coding agent sings: its replies, and songs it composes, on the
 [CHIMERA](https://github.com/jamesondh/chimera-vocal-synth) physical-model voice, with a 3D head
 whose tongue, lips and jaw move with the sound.
 
-[![Claude Code composes "Never Gonna Force Push Main" and a four-voice band sings it](demo/poster.jpg)](demo/chimera-sing-demo.mp4)
-
-*In the demo, Claude Code writes a developer parody and arranges it for four voices. The band's
-audio was rendered from Claude's score with the same engine; live, a band needs a fast machine
-(see below).*
+https://github.com/user-attachments/assets/9147c2ef-1e6e-4331-862b-6ff918f2bce5
 
 ## Install
 
