@@ -12,7 +12,7 @@ import { fileURLToPath } from "node:url";
 import { homedir } from "node:os";
 import { delimiter, dirname, join } from "node:path";
 var BUNDLED = true;
-var BUILD = "79709ccb6dfb";
+var BUILD = "38bfef586d66";
 var here = dirname(fileURLToPath(import.meta.url));
 var root = BUNDLED ? dirname(here) : dirname(dirname(here));
 var STAGE_DIR = BUNDLED ? join(root, "stage") : join(root, "dist");
@@ -209,10 +209,12 @@ async function runSlash(args, ctx = {}) {
   const text = args.trim();
   const [cmd, ...rest] = text.split(/\s+/);
   try {
-    if (!text) {
+    if (!text || cmd === "last" && !rest.length) {
       const reply = (ctx.lastReply ?? lastReply()).trim();
-      return reply ? await singText(reply) : { ok: false, say: "Nothing to sing yet. Try: /sing hello there" };
+      return reply ? await singText(reply) : { ok: false, say: 'Nothing to sing yet. Try "/sing:say hello there".' };
     }
+    if (cmd === "say")
+      return rest.length ? await singText(rest.join(" ")) : { ok: false, say: "Say what? /sing:say <words>" };
     if (cmd === "stop" && !rest.length) {
       await stopSinging();
       return { ok: true, say: "Stopped." };

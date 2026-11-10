@@ -9,7 +9,7 @@ import { fileURLToPath } from "node:url";
 import { homedir } from "node:os";
 import { delimiter, dirname, join } from "node:path";
 var BUNDLED = true;
-var BUILD = "79709ccb6dfb";
+var BUILD = "38bfef586d66";
 var here = dirname(fileURLToPath(import.meta.url));
 var root = BUNDLED ? dirname(here) : dirname(dirname(here));
 var STAGE_DIR = BUNDLED ? join(root, "stage") : join(root, "dist");
@@ -225,7 +225,7 @@ function plainCommand(prompt) {
   const m = prompt.match(/^\s*sing\s+(on|off|stop)\s*[.!]?\s*$/i);
   return m ? m[1].toLowerCase() : null;
 }
-var SLASH_COMPLETIONS = ["on", "off", "song", "stop", "length short", "length normal", "length full", "voice male", "voice female", "voice child", "status"];
+var SLASH_COMPLETIONS = ["on", "off", "stop", "song", "say", "last", "length short", "length normal", "length full", "voice male", "voice female", "voice child", "status"];
 async function singModeOn() {
   writeSettings({ auto: true });
   const r = await sing({ text: "Sing mode on.", replace: true });
@@ -247,10 +247,12 @@ async function runSlash(args, ctx = {}) {
   const text = args.trim();
   const [cmd, ...rest] = text.split(/\s+/);
   try {
-    if (!text) {
+    if (!text || cmd === "last" && !rest.length) {
       const reply = (ctx.lastReply ?? lastReply()).trim();
-      return reply ? await singText(reply) : { ok: false, say: "Nothing to sing yet. Try: /sing hello there" };
+      return reply ? await singText(reply) : { ok: false, say: 'Nothing to sing yet. Try "/sing:say hello there".' };
     }
+    if (cmd === "say")
+      return rest.length ? await singText(rest.join(" ")) : { ok: false, say: "Say what? /sing:say <words>" };
     if (cmd === "stop" && !rest.length) {
       await stopSinging();
       return { ok: true, say: "Stopped." };
@@ -280,6 +282,19 @@ async function runSlash(args, ctx = {}) {
     return { ok: false, say: `chimera-sing: ${e instanceof Error ? e.message : e}` };
   }
 }
+
+// agent/core/commands.ts
+var COMMANDS = [
+  { name: "on", description: "Sing mode on: every reply is sung as it ends (its chat text, never code)", run: "on" },
+  { name: "off", description: "Sing mode off", run: "off" },
+  { name: "stop", description: "Stop the song now", run: "stop" },
+  { name: "song", description: "Have the agent compose a short song and sing it", hint: "<topic>", run: "song" },
+  { name: "say", description: "Sing these words to an automatic tune", hint: "<words>", run: "say" },
+  { name: "last", description: "Sing the last reply again", run: "last" },
+  { name: "voice", description: "Choose the singer and the style of the automatic tune", hint: "<male|female|child> [tune|chant]", run: "voice" },
+  { name: "length", description: "How much of a reply is sung", hint: "<short|normal|full>", run: "length" },
+  { name: "status", description: "Is the singer running, and how is it set", run: "status" }
+];
 
 // agent/pi/index.ts
 function textOf(message) {
@@ -375,26 +390,33 @@ ${notes}` : ""}` }], details: { ok: true, seconds: r.seconds, notes: r.notes } }
       }
     }
   });
+  async function slash(args, ctx) {
+    try {
+      const r = await runSlash(args, { lastReply: lastReply2 });
+      if (r.prompt)
+        return void pi.sendUserMessage(r.prompt);
+      if (r.seconds !== undefined)
+        showSinging(ctx, r.seconds);
+      else
+        setStatus(ctx, idleStatus());
+      ctx.ui.notify(r.say, r.ok ? "info" : "warning");
+    } catch (e) {
+      ctx.ui.notify(`sing: ${e instanceof Error ? e.message : e}`, "error");
+    }
+  }
+  for (const c of COMMANDS) {
+    pi.registerCommand(`sing:${c.name}`, {
+      description: c.description + (c.hint ? ` (${c.hint})` : ""),
+      handler: (args, ctx) => slash(`${c.run} ${args}`.trim(), ctx)
+    });
+  }
   pi.registerCommand("sing", {
     description: "on | off: sing every reply. Or: <text> | song [topic] | stop | length <short|normal|full> | voice <male|female|child> [tune|chant] | status. Alone: sing the last reply.",
     getArgumentCompletions: (prefix) => {
       const items = SLASH_COMPLETIONS.filter((x) => x.startsWith(prefix.trimStart()));
       return items.length ? items.map((value) => ({ value, label: value })) : null;
     },
-    handler: async (args, ctx) => {
-      try {
-        const r = await runSlash(args, { lastReply: lastReply2 });
-        if (r.prompt)
-          return void pi.sendUserMessage(r.prompt);
-        if (r.seconds !== undefined)
-          showSinging(ctx, r.seconds);
-        else
-          setStatus(ctx, idleStatus());
-        ctx.ui.notify(r.say, r.ok ? "info" : "warning");
-      } catch (e) {
-        ctx.ui.notify(`chimera: ${e instanceof Error ? e.message : e}`, "error");
-      }
-    }
+    handler: (args, ctx) => slash(args, ctx)
   });
   pi.on("session_start", (_event, ctx) => {
     if (isMain(ctx))
@@ -446,7 +468,7 @@ ${notes}` : ""}` }], details: { ok: true, seconds: r.seconds, notes: r.notes } }
       ctx.ui.notify(r.say, r.ok ? "info" : "warning");
       return { handled: true };
     }
-    if (mayBeSinging && !event.text.trimStart().startsWith("/sing")) {
+    if (mayBeSinging && !/^\/sing(:|\s|$)/.test(event.text.trimStart())) {
       mayBeSinging = false;
       stopSinging().catch(() => {});
     }

@@ -15,7 +15,7 @@ import { fileURLToPath } from "node:url";
 import { homedir } from "node:os";
 import { delimiter, dirname, join } from "node:path";
 var BUNDLED = true;
-var BUILD = "79709ccb6dfb";
+var BUILD = "38bfef586d66";
 var here = dirname(fileURLToPath(import.meta.url));
 var root = BUNDLED ? dirname(here) : dirname(dirname(here));
 var STAGE_DIR = BUNDLED ? join(root, "stage") : join(root, "dist");
@@ -237,10 +237,12 @@ async function runSlash(args, ctx = {}) {
   const text = args.trim();
   const [cmd, ...rest] = text.split(/\s+/);
   try {
-    if (!text) {
+    if (!text || cmd === "last" && !rest.length) {
       const reply = (ctx.lastReply ?? lastReply()).trim();
-      return reply ? await singText(reply) : { ok: false, say: "Nothing to sing yet. Try: /sing hello there" };
+      return reply ? await singText(reply) : { ok: false, say: 'Nothing to sing yet. Try "/sing:say hello there".' };
     }
+    if (cmd === "say")
+      return rest.length ? await singText(rest.join(" ")) : { ok: false, say: "Say what? /sing:say <words>" };
     if (cmd === "stop" && !rest.length) {
       await stopSinging();
       return { ok: true, say: "Stopped." };
@@ -270,6 +272,19 @@ async function runSlash(args, ctx = {}) {
     return { ok: false, say: `chimera-sing: ${e instanceof Error ? e.message : e}` };
   }
 }
+
+// agent/core/commands.ts
+var COMMANDS = [
+  { name: "on", description: "Sing mode on: every reply is sung as it ends (its chat text, never code)", run: "on" },
+  { name: "off", description: "Sing mode off", run: "off" },
+  { name: "stop", description: "Stop the song now", run: "stop" },
+  { name: "song", description: "Have the agent compose a short song and sing it", hint: "<topic>", run: "song" },
+  { name: "say", description: "Sing these words to an automatic tune", hint: "<words>", run: "say" },
+  { name: "last", description: "Sing the last reply again", run: "last" },
+  { name: "voice", description: "Choose the singer and the style of the automatic tune", hint: "<male|female|child> [tune|chant]", run: "voice" },
+  { name: "length", description: "How much of a reply is sung", hint: "<short|normal|full>", run: "length" },
+  { name: "status", description: "Is the singer running, and how is it set", run: "status" }
+];
 
 // agent/hooks/on-event.ts
 function assistantText(line) {
@@ -321,6 +336,15 @@ function slashArgs(prompt) {
   const tagged = prompt.match(/<chimera-sing>([\s\S]*?)<\/chimera-sing>/);
   if (tagged)
     return tagged[1].trim();
+  const one = prompt.match(/^\s*\/(?:[\w.-]+:)?sing:([a-z]+)(?:\s+([\s\S]*))?$/);
+  if (one) {
+    const c = COMMANDS.find((x) => x.name === one[1]);
+    if (c)
+      return `${c.run} ${c.hint ? (one[2] ?? "").trim() : ""}`.trim();
+    if (one[1] === "sing")
+      return (one[2] ?? "").trim();
+    return null;
+  }
   const typed = prompt.match(/^\s*\/(?:[\w.-]+:)?sing(?:\s+([\s\S]*))?$/);
   if (typed)
     return (typed[1] ?? "").trim();

@@ -127,8 +127,13 @@ Example, on "Daisy Bell" (1892), scheme A B C D, lines 2 and 4 rhyme:
 
 ## Commands the user has
 
-`sing on` (typed as a prompt, or the slash command with `on`) turns sing mode on: every reply
-is sung as it ends (its chat text, never code); `sing off` stops that. In Claude Code the slash
-command is `/chimera-sing:sing`. `/sing` sings your last reply to an automatic tune, `/sing <text>` sings
-that text, `/sing song [topic]` asks you for a composed song. Also `/sing stop`,
-`/sing length short|normal|full`, `/sing voice male|female|child [tune|chant]`.
+| | |
+|---|---|
+| `/sing:on`, `/sing:off` | sing mode: every reply is sung as it ends (its chat text, never code) |
+| `/sing:stop` | stop the song |
+| `/sing:song <topic>` | ask you for a composed song |
+| `/sing:say <words>` | sing those words to an automatic tune |
+| `/sing:last` | sing your last reply again |
+| `/sing:voice male\|female\|child [tune\|chant]`, `/sing:length short\|normal\|full`, `/sing:status` | settings |
+
+The plain prompts `sing on`, `sing off` and `sing stop` work too, in every agent.

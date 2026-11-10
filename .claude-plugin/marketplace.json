@@ -5,10 +5,10 @@
   },
   "plugins": [
     {
-      "name": "chimera-sing",
+      "name": "sing",
       "source": "./plugin",
       "description": "Your coding agent sings its replies, and songs it composes, on the CHIMERA physical-model voice.",
-      "version": "0.2.2"
+      "version": "0.3.0"
     }
   ]
 }

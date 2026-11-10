@@ -1,5 +1,5 @@
 {
-  "description": "chimera-sing: sing the start of each reply in auto mode, carry out /sing, stop the song on a new prompt",
+  "description": "sing: sing each reply in sing mode, carry out the /sing: commands and the prompts sing on / sing off / sing stop, stop the song on a new prompt",
   "hooks": {
     "Stop": [
       {

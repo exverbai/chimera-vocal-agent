@@ -2,7 +2,7 @@
   "name": "chimera-vocal-agent",
   "plugins": [
     {
-      "name": "chimera-sing",
+      "name": "sing",
       "source": {
         "source": "local",
         "path": "./plugin"
