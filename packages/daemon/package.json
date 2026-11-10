@@ -1,0 +1,8 @@
+{
+  "name": "@chimera-vocal-agent/daemon",
+  "private": true,
+  "version": "0.0.1",
+  "type": "module",
+  "bin": { "chimera-sing": "./src/cli.ts" },
+  "devDependencies": { "@types/bun": "1.4.4" }
+}

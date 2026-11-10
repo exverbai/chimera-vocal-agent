@@ -1,0 +1,19 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "chimera-sing",
+  "version": "0.0.1",
+  "description": "Your coding agent sings: replies and composed songs on the CHIMERA physical-model voice, with its animated head.",
+  "license": "MIT",
+  "keywords": ["voice", "singing", "audio", "chimera"],
+  "extensions": {
+    "com.openai": {
+      "hooks": "./hooks/hooks.json",
+      "interface": {
+        "displayName": "Chimera Sing",
+        "shortDescription": "The agent sings its replies and composes songs",
+        "category": "Productivity",
+        "defaultPrompt": ["Sing me a short song about this repository."]
+      }
+    }
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "description": "chimera-sing: sing the start of each reply in auto mode, carry out /sing, stop the song on a new prompt",
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          { "type": "command", "command": "bun \"${CLAUDE_PLUGIN_ROOT}/bin/hook.js\"", "timeout": 15 }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          { "type": "command", "command": "bun \"${CLAUDE_PLUGIN_ROOT}/bin/hook.js\"", "timeout": 15 }
+        ]
+      }
+    ]
+  }
+}
