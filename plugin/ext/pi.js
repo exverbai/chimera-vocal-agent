@@ -9,7 +9,7 @@ import { fileURLToPath } from "node:url";
 import { homedir } from "node:os";
 import { delimiter, dirname, join } from "node:path";
 var BUNDLED = true;
-var BUILD = "7dc10f16398c";
+var BUILD = "79709ccb6dfb";
 var here = dirname(fileURLToPath(import.meta.url));
 var root = BUNDLED ? dirname(here) : dirname(dirname(here));
 var STAGE_DIR = BUNDLED ? join(root, "stage") : join(root, "dist");
@@ -221,12 +221,16 @@ function lastReply() {
 }
 
 // agent/core/slash.ts
+function plainCommand(prompt) {
+  const m = prompt.match(/^\s*sing\s+(on|off|stop)\s*[.!]?\s*$/i);
+  return m ? m[1].toLowerCase() : null;
+}
 var SLASH_COMPLETIONS = ["on", "off", "song", "stop", "length short", "length normal", "length full", "voice male", "voice female", "voice child", "status"];
 async function singModeOn() {
   writeSettings({ auto: true });
   const r = await sing({ text: "Sing mode on.", replace: true });
   const window = r.ok && r.window === false ? " Opening the singer's window." : "";
-  return { ok: true, say: `Sing mode is on: I will sing my replies.${window} /sing off stops it.`, seconds: r.seconds };
+  return { ok: true, say: `Sing mode is on: I will sing my replies.${window} Say "sing off" to stop.`, seconds: r.seconds };
 }
 async function singModeOff() {
   writeSettings({ auto: false });
@@ -431,7 +435,17 @@ ${notes}` : ""}` }], details: { ok: true, seconds: r.seconds, notes: r.notes } }
       autoSing(text, ctx);
     });
   }
-  pi.on("input", (event) => {
+  pi.on("input", async (event, ctx) => {
+    const plain = plainCommand(event.text);
+    if (plain) {
+      const r = await runSlash(plain, { lastReply: lastReply2 });
+      if (r.seconds !== undefined)
+        showSinging(ctx, r.seconds);
+      else
+        setStatus(ctx, idleStatus());
+      ctx.ui.notify(r.say, r.ok ? "info" : "warning");
+      return { handled: true };
+    }
     if (mayBeSinging && !event.text.trimStart().startsWith("/sing")) {
       mayBeSinging = false;
       stopSinging().catch(() => {});

@@ -127,7 +127,8 @@ Example, on "Daisy Bell" (1892), scheme A B C D, lines 2 and 4 rhyme:
 
 ## Commands the user has
 
-`/sing on` turns sing mode on: every reply is sung as it ends (its chat text, never code);
-`/sing off` stops that. `/sing` sings your last reply to an automatic tune, `/sing <text>` sings
+`sing on` (typed as a prompt, or the slash command with `on`) turns sing mode on: every reply
+is sung as it ends (its chat text, never code); `sing off` stops that. In Claude Code the slash
+command is `/chimera-sing:sing`. `/sing` sings your last reply to an automatic tune, `/sing <text>` sings
 that text, `/sing song [topic]` asks you for a composed song. Also `/sing stop`,
 `/sing length short|normal|full`, `/sing voice male|female|child [tune|chant]`.

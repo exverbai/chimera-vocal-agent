@@ -353,7 +353,7 @@ import { fileURLToPath } from "node:url";
 import { homedir } from "node:os";
 import { delimiter, dirname, join } from "node:path";
 var BUNDLED = true;
-var BUILD = "7dc10f16398c";
+var BUILD = "79709ccb6dfb";
 var here = dirname(fileURLToPath(import.meta.url));
 var root = BUNDLED ? dirname(here) : dirname(dirname(here));
 var STAGE_DIR = BUNDLED ? join(root, "stage") : join(root, "dist");
@@ -1044,6 +1044,9 @@ function openWindow(url) {
   return which("xdg-open") && launch("xdg-open", [url]) ? { how: "xdg-open", autoplay: false } : null;
 }
 
+// agent/daemon/server.ts
+import { mkdirSync as mkdirSync2, writeFileSync as writeFileSync2 } from "node:fs";
+
 // agent/core/settings.ts
 import { existsSync as existsSync3, mkdirSync, readFileSync as readFileSync3, rmSync, statSync, writeFileSync } from "node:fs";
 import { homedir as homedir2 } from "node:os";
@@ -1143,7 +1146,7 @@ async function startDaemon(o) {
     if (!ws)
       return ensureWindow();
     const song = queue.shift();
-    const timer = setTimeout(() => done(song.id), (song.seconds + 25) * 1000);
+    const timer = setTimeout(() => done(song.id), (song.seconds * (song.melody.backing?.length ? 2 : 1) + 25) * 1000);
     current = { song, timer };
     ws.send({ type: "sing", id: song.id, melody: song.melody });
   }
@@ -1194,6 +1197,10 @@ async function startDaemon(o) {
       stopAll();
     reply.queued = queue.length + (current ? 1 : 0);
     reply.window = clients.size > 0;
+    try {
+      mkdirSync2(CACHE, { recursive: true });
+      writeFileSync2(join4(CACHE, "last-song.json"), JSON.stringify({ at: new Date().toISOString(), songs: songs.map((x2) => x2.melody) }));
+    } catch {}
     for (const x2 of songs) {
       queue.push({ id: nextId++, melody: x2.melody, seconds: x2.seconds });
       o.log(`song ${nextId - 1}: ${x2.notes} notes, ${x2.seconds.toFixed(1)} s: ${x2.melody.lyrics}`);

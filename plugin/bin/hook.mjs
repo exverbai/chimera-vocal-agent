@@ -15,7 +15,7 @@ import { fileURLToPath } from "node:url";
 import { homedir } from "node:os";
 import { delimiter, dirname, join } from "node:path";
 var BUNDLED = true;
-var BUILD = "7dc10f16398c";
+var BUILD = "79709ccb6dfb";
 var here = dirname(fileURLToPath(import.meta.url));
 var root = BUNDLED ? dirname(here) : dirname(dirname(here));
 var STAGE_DIR = BUNDLED ? join(root, "stage") : join(root, "dist");
@@ -212,11 +212,15 @@ function takeSang(maxAgeMs = 10 * 60 * 1000) {
 }
 
 // agent/core/slash.ts
+function plainCommand(prompt) {
+  const m = prompt.match(/^\s*sing\s+(on|off|stop)\s*[.!]?\s*$/i);
+  return m ? m[1].toLowerCase() : null;
+}
 async function singModeOn() {
   writeSettings({ auto: true });
   const r = await sing({ text: "Sing mode on.", replace: true });
   const window = r.ok && r.window === false ? " Opening the singer's window." : "";
-  return { ok: true, say: `Sing mode is on: I will sing my replies.${window} /sing off stops it.`, seconds: r.seconds };
+  return { ok: true, say: `Sing mode is on: I will sing my replies.${window} Say "sing off" to stop.`, seconds: r.seconds };
 }
 async function singModeOff() {
   writeSettings({ auto: false });
@@ -320,8 +324,7 @@ function slashArgs(prompt) {
   const typed = prompt.match(/^\s*\/(?:[\w.-]+:)?sing(?:\s+([\s\S]*))?$/);
   if (typed)
     return (typed[1] ?? "").trim();
-  const bare = prompt.match(/^\s*sing\s+(on|off|stop)\s*[.!]?\s*$/i);
-  return bare ? bare[1].toLowerCase() : null;
+  return plainCommand(prompt);
 }
 async function onEvent(input) {
   switch (input.hook_event_name) {
